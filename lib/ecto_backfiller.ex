@@ -123,9 +123,7 @@ defmodule EctoBackfiller do
           })
 
         if Producer.running?(producer) do
-          {:ok, subscription} =
-            GenStage.sync_subscribe(consumer, [to: producer] ++ demand_options())
-
+          {:ok, subscription} = GenStage.sync_subscribe(consumer, subscribe_opts(producer))
           Producer.add_consumer(producer, consumer, subscription)
         else
           Producer.add_consumer(producer, consumer)
@@ -146,9 +144,7 @@ defmodule EctoBackfiller do
           {_consumer, _subscription} -> false
         end)
         |> Enum.each(fn {consumer, nil} ->
-          {:ok, subscription} =
-            GenStage.sync_subscribe(consumer, [to: producer] ++ demand_options())
-
+          {:ok, subscription} = GenStage.sync_subscribe(consumer, subscribe_opts(producer))
           Producer.put_subscription(producer, consumer, subscription)
         end)
       end
@@ -156,14 +152,19 @@ defmodule EctoBackfiller do
       @doc """
       Cancels all consumer subscriptions.
       """
-      def stop do
-        get_producer()
+      @spec cancel() :: :ok
+      def cancel do
+        producer = get_producer()
+
+        producer
         |> Producer.get_consumers()
         |> Enum.filter(fn
           {_consumer, subscription} when is_reference(subscription) -> true
-          {_consumer, _subscription} -> false
+          _ -> false
         end)
-        |> Enum.each(&GenStage.cancel(&1, :shutdown))
+        |> Enum.each(fn {consumer, subscription} ->
+          :ok = GenStage.cancel({producer, subscription}, :shutdown)
+        end)
       end
 
       defp get_supervisor, do: Process.whereis(__MODULE__)
@@ -180,7 +181,14 @@ defmodule EctoBackfiller do
         producer
       end
 
-      defp demand_options, do: [max_demand: step(), min_demand: div(step(), 2)]
+      defp subscribe_opts(producer) do
+        [
+          to: producer,
+          max_demand: step(),
+          min_demand: div(step(), 2),
+          cancel: :transient
+        ]
+      end
     end
   end
 end
