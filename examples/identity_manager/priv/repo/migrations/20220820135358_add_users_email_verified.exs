@@ -1,4 +1,4 @@
-defmodule ExampleApplication.Repo.Migrations.AddUsersEmailVerified do
+defmodule IdentityManager.Repo.Migrations.AddUsersEmailVerified do
   use Ecto.Migration
 
   def change do
