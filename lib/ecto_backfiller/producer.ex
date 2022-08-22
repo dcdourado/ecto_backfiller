@@ -2,10 +2,10 @@ defmodule EctoBackfiller.Producer do
   use GenStage
   import Ecto.Query, only: [limit: 2, offset: 2, order_by: 2]
 
-  defstruct [:query, :step, :offset, :repo, :consumers, :running?]
+  defstruct [:query, :step, :offset, :repo, :consumers]
 
   def start_link(%__MODULE__{} = config) do
-    GenStage.start_link(__MODULE__, %{config | consumers: [], running?: false})
+    GenStage.start_link(__MODULE__, %{config | consumers: []})
   end
 
   def running?(producer) when is_pid(producer) do
@@ -56,7 +56,13 @@ defmodule EctoBackfiller.Producer do
 
   @impl true
   def handle_call(:running?, _from, state) do
-    {:reply, state.running?, [], state}
+    running? =
+      Enum.any?(state.consumers, fn
+        {_consumer, subscription} when is_reference(subscription) -> true
+        _ -> false
+      end)
+
+    {:reply, running?, [], state}
   end
 
   @impl true
