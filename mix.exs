@@ -41,7 +41,7 @@ defmodule EctoBackfiller.MixProject do
 
   defp package() do
     [
-      files: ~w(lib priv .formatter.exs mix.exs README.md LICENSE),
+      files: ~w(lib .formatter.exs mix.exs README.md LICENSE),
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/dcdourado/ecto_backfiller"}
     ]
