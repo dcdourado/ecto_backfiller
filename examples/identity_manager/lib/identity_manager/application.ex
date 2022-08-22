@@ -1,4 +1,4 @@
-defmodule EctoBackfiller.Application do
+defmodule IdentityManager.Application do
   @moduledoc false
 
   use Application
@@ -6,10 +6,10 @@ defmodule EctoBackfiller.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      ExampleApplication.Repo
+      IdentityManager.Repo
     ]
 
-    opts = [strategy: :one_for_one, name: EctoBackfiller.Supervisor]
+    opts = [strategy: :one_for_one, name: IdentityManager.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

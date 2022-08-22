@@ -1,6 +1,6 @@
-alias ExampleApplication.Users
+alias IdentityManager.Users
 
-Enum.each(1..10_000, fn _ ->
+Enum.each(1..1_000, fn _ ->
   email_verified_at =
     if Enum.random([true, false]) do
       NaiveDateTime.utc_now()
