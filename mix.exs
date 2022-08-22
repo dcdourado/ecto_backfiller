@@ -21,17 +21,17 @@ defmodule EctoBackfiller.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
-      mod: {EctoBackfiller.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
   defp deps do
     [
       {:gen_stage, "~> 1.1.2"},
-      {:ex_doc, "~> 0.28.0", only: :dev},
+      {:ecto, "~> 3.8.4"},
       {:ecto_sql, "~> 3.8.3"},
-      {:postgrex, ">= 0.0.0"}
+      {:postgrex, ">= 0.0.0"},
+      {:ex_doc, "~> 0.28.0", only: :dev}
     ]
   end
 
