@@ -27,6 +27,10 @@ defmodule EctoBackfiller.Producer do
     GenStage.cast(producer, {:put_subscription, consumer, subscription})
   end
 
+  def cancel_subscription(producer, consumer) when is_pid(producer) and is_pid(consumer) do
+    GenStage.cast(producer, {:cancel_subscription, consumer})
+  end
+
   # Callbacks
 
   @impl true
@@ -71,6 +75,17 @@ defmodule EctoBackfiller.Producer do
     consumers =
       Enum.map(state.consumers, fn
         {^consumer, _} -> {consumer, subscription}
+        other -> other
+      end)
+
+    {:noreply, [], %{state | consumers: consumers}}
+  end
+
+  @impl true
+  def handle_cast({:cancel_subscription, consumer}, state) do
+    consumers =
+      Enum.map(state.consumers, fn
+        {^consumer, _} -> {consumer, nil}
         other -> other
       end)
 

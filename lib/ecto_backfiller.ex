@@ -164,6 +164,7 @@ defmodule EctoBackfiller do
         end)
         |> Enum.each(fn {consumer, subscription} ->
           :ok = GenStage.cancel({producer, subscription}, :shutdown)
+          Producer.cancel_subscription(producer, consumer)
         end)
       end
 
