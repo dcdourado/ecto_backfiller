@@ -46,7 +46,6 @@ defmodule EctoBackfiller.Producer do
       when demand > 0 do
     events =
       query
-      |> order_by(asc: :inserted_at)
       |> limit(^step)
       |> offset(^offset)
       |> repo.all()
