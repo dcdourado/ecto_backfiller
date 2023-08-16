@@ -1,6 +1,6 @@
 defmodule EctoBackfiller.Producer do
   use GenStage
-  import Ecto.Query, only: [limit: 2, offset: 2, order_by: 2]
+  import Ecto.Query, only: [limit: 2, offset: 2]
   require Logger
 
   defstruct [:query, :step, :offset, :repo, :consumers]
