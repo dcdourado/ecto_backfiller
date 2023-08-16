@@ -53,6 +53,12 @@ defmodule EctoBackfiller do
   end
   ```
 
+  Please mind that the `handle_batch/1` callback MUST not modify the results of the query, as it
+  will be used to determine the offset for the next batch of data to be fetched.
+
+  You also need to guarantee the ordering of the data fetched, since the backfill is based on
+  offsets, if the data is not ordered, you may end up with duplicated or missing data.
+
   Now you are ready to start executing it and to do so you must start the Supervisor, which will
   be named as the backfill module's name, or in other words, it is a unique proccess per backfill
   module.
