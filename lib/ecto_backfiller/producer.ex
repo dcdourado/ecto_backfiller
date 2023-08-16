@@ -1,6 +1,7 @@
 defmodule EctoBackfiller.Producer do
   use GenStage
   import Ecto.Query, only: [limit: 2, offset: 2, order_by: 2]
+  require Logger
 
   defstruct [:query, :step, :offset, :repo, :consumers]
 
@@ -44,11 +45,15 @@ defmodule EctoBackfiller.Producer do
         %__MODULE__{query: query, step: step, offset: offset, repo: repo} = state
       )
       when demand > 0 do
+    Logger.info("Producing #{step} events from #{offset} offset...")
+
     events =
       query
       |> limit(^step)
       |> offset(^offset)
       |> repo.all()
+
+    Logger.info("Produced #{length(events)} events from #{offset} offset")
 
     {:noreply, events, %{state | offset: offset + step}}
   end
