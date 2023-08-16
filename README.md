@@ -16,7 +16,7 @@ end
 
 ## Documentation
 
-Documentation can be found at [hexdocs](https://hexdocs.pm/ecto_backfiller).
+Documentation on how to use the library and important warnings can be found at [hexdocs](https://hexdocs.pm/ecto_backfiller).
 
 An example application is also available on the repository to
 help you visualize the usage of this library.
