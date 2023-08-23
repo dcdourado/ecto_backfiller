@@ -51,7 +51,7 @@ defmodule EctoBackfiller.Producer do
       query
       |> limit(^step)
       |> offset(^offset)
-      |> repo.all()
+      |> repo.all(timeout: :infinity)
 
     Logger.info("Produced #{length(events)} events from #{offset} offset")
 
