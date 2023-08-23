@@ -1,4 +1,5 @@
 defmodule EctoBackfiller.Consumer do
+  require Logger
   use GenStage
 
   defstruct [:handle_batch]
@@ -16,7 +17,7 @@ defmodule EctoBackfiller.Consumer do
 
   @impl true
   def handle_events(events, _from, %__MODULE__{handle_batch: handle_batch} = state) do
-    IO.puts("Processing #{length(events)} events...")
+    Logger.info("Processing #{length(events)} events...")
     :ok = handle_batch.(events)
     {:noreply, [], state}
   end
