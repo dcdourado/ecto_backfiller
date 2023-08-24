@@ -53,7 +53,7 @@ defmodule EctoBackfiller do
   end
   ```
 
-  Please mind that the `handle_batch/1` callback MUST not modify the results of the query, as it
+  Please mind that the `handle_batch/1` callback MUST NOT modify the results of the query, as it
   will be used to determine the offset for the next batch of data to be fetched.
 
   You also need to guarantee the ordering of the data fetched, since the backfill is based on
@@ -67,7 +67,9 @@ defmodule EctoBackfiller do
   ```
   alias MyApp.Backfills.UserEmailVerifiedBackfill
 
-  UserEmailVerifiedBackfill.start_link()
+  offset = 0
+  stop_offset = nil
+  UserEmailVerifiedBackfill.start_link(offset, stop_offset)
   :ok
 
   UserEmailVerifiedBackfill.add_consumer()
@@ -77,7 +79,11 @@ defmodule EctoBackfiller do
   :ok
   ```
 
-  You may add or more consumers on the fly, based on how the application performs based on the step
+  You can tweak the `start_link/2` function to start with a different offset, or to stop at a
+  specific offset. If arguments are not given, it will start from the beginning and will fetch
+  all data.
+
+  You may add more consumers on the fly, based on how the application performs based on the step
   used and the number of consumers subscribed.
   """
 
@@ -100,9 +106,12 @@ defmodule EctoBackfiller do
 
       @doc """
       Starts supervisor and producer processes.
+
+      - `offset` is the initial offset to start fetching data from.
+      - `stop_offset` is the offset to stop fetching data from, if `nil` it will fetch all data.
       """
-      @spec start_link(offset :: non_neg_integer) :: :ok
-      def start_link(offset \\ 0) do
+      @spec start_link(offset :: non_neg_integer, stop_offset :: nil | non_neg_integer) :: :ok
+      def start_link(offset \\ 0, stop_offset \\ nil) do
         {:ok, sup} = DynamicSupervisor.start_link(name: __MODULE__)
 
         {:ok, producer} =
@@ -110,6 +119,7 @@ defmodule EctoBackfiller do
             query: query(),
             step: step(),
             offset: offset,
+            stop_offset: stop_offset,
             repo: Keyword.fetch!(unquote(opts), :repo)
           })
 

@@ -3,7 +3,7 @@ defmodule EctoBackfiller.Producer do
   import Ecto.Query, only: [limit: 2, offset: 2]
   require Logger
 
-  defstruct [:query, :step, :offset, :repo, :consumers]
+  defstruct [:query, :step, :offset, :stop_offset, :repo, :consumers]
 
   def start_link(%__MODULE__{} = config) do
     GenStage.start_link(__MODULE__, %{config | consumers: []})
@@ -42,20 +42,29 @@ defmodule EctoBackfiller.Producer do
   @impl true
   def handle_demand(
         demand,
-        %__MODULE__{query: query, step: step, offset: offset, repo: repo} = state
+        %__MODULE__{query: query, step: step, offset: offset, stop_offset: stop_offset, repo: repo} = state
       )
       when demand > 0 do
     Logger.info("Producing #{step} events from #{offset} offset...")
 
-    events =
-      query
-      |> limit(^step)
-      |> offset(^offset)
-      |> repo.all(timeout: :infinity)
+    if (is_number(stop_offset) and offset >= stop_offset) do
+      Logger.warning("""
+      Producer stopped because current offset is #{offset} and it reached
+      max offset #{stop_offset}.
+      """)
 
-    Logger.info("Produced #{length(events)} events from #{offset} offset")
+      {:noreply, [], state}
+    else
+      events =
+        query
+        |> limit(^step)
+        |> offset(^offset)
+        |> repo.all(timeout: :infinity)
 
-    {:noreply, events, %{state | offset: offset + step}}
+      Logger.info("Produced #{length(events)} events from #{offset} offset")
+
+      {:noreply, events, %{state | offset: offset + step}}
+    end
   end
 
   @impl true
