@@ -54,22 +54,24 @@ defmodule EctoBackfiller do
   ```
 
   Please mind that the `handle_batch/1` callback MUST NOT modify the results of the query, as it
-  will be used to determine the offset for the next batch of data to be fetched.
+  will be used to determine the next batch of data to be fetched.
 
   You also need to guarantee the ordering of the data fetched, since the backfill is based on
-  offsets, if the data is not ordered, you may end up with duplicated or missing data.
+  querying the next batch using the last result seek column value. If the data is not ordered,
+  you may end up with duplicated events and/or missing data.
 
   Now you are ready to start executing it and to do so you must start the Supervisor, which will
   be named as the backfill module's name, or in other words, it is a unique proccess per backfill
   module.
 
-  Inside the application IEx session:
+  The example below will affect users with ID greater than 100 (not including 100) and will
+  backfill data until the `id` column reaches `1_000`. Inside the application IEx session:
   ```
   alias MyApp.Backfills.UserEmailVerifiedBackfill
 
-  offset = 0
-  stop_offset = nil
-  UserEmailVerifiedBackfill.start_link(offset, stop_offset)
+  last_seeked_val = 100
+  stop_seek_val = 1_000
+  UserEmailVerifiedBackfill.start_link(last_seeked_val, stop_seek_val)
   :ok
 
   UserEmailVerifiedBackfill.add_consumer()
@@ -79,9 +81,8 @@ defmodule EctoBackfiller do
   :ok
   ```
 
-  You can tweak the `start_link/2` function to start with a different offset, or to stop at a
-  specific offset. If arguments are not given, it will start from the beginning and will fetch
-  all data.
+  You can tweak the `start_link/2` function to start from the beggining by setting `last_seeked_val`
+  to `nil`, or to stop when all users are backfilled setting the `stop_seek_val` to `nil`.
 
   You may add more consumers on the fly, based on how the application performs based on the step
   used and the number of consumers subscribed.
@@ -92,6 +93,9 @@ defmodule EctoBackfiller do
 
   @doc "Amount of data fetched per step"
   @callback step() :: pos_integer()
+
+  @doc "Column used to determine what to seek"
+  @callback seek_col() :: atom()
 
   @doc "Handles the backfill logic given a list of data"
   @callback handle_batch(list(struct())) :: :ok
@@ -107,19 +111,23 @@ defmodule EctoBackfiller do
       @doc """
       Starts supervisor and producer processes.
 
-      - `offset` is the initial offset to start fetching data from.
-      - `stop_offset` is the offset to stop fetching data from, if `nil` it will fetch all data.
+      - `last_seeked_val` is the last value of `seek_col` used to determine the starting point
+        of the next batch of data to be fetched. If `nil` is given, it will start from the
+        beginning.
+      - `stop_seek_val` is the value of `seek_col` used to determine when to stop fetching data.
+        If `nil` is given, it will fetch all data.
       """
-      @spec start_link(offset :: non_neg_integer, stop_offset :: nil | non_neg_integer) :: :ok
-      def start_link(offset \\ 0, stop_offset \\ nil) do
+      @spec start_link(last_seeked_val :: nil | term()) :: :ok
+      def start_link(last_seeked_val \\ nil, stop_seek_val \\ nil) do
         {:ok, sup} = DynamicSupervisor.start_link(name: __MODULE__)
 
         {:ok, producer} =
           DynamicSupervisor.start_producer(sup, %Producer{
             query: query(),
             step: step(),
-            offset: offset,
-            stop_offset: stop_offset,
+            seek_col: seek_col(),
+            last_seeked_val: last_seeked_val,
+            stop_seek_val: stop_seek_val,
             repo: Keyword.fetch!(unquote(opts), :repo)
           })
 
@@ -127,7 +135,10 @@ defmodule EctoBackfiller do
       end
 
       @doc """
-      Adds an inactive consumer to supervision tree.
+      Adds a consumer to supervision tree.
+
+      If producer is running, it will subscribe the consumer to the producer, otherwise it will
+      just add the consumer to the list of consumers.
       """
       @spec add_consumer() :: :ok
       def add_consumer do

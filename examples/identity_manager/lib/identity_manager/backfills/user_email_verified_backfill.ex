@@ -13,6 +13,9 @@ defmodule IdentityManager.Backfills.UserEmailVerifiedBackfill do
   def step, do: 5
 
   @impl true
+  def seek_col, do: :id
+
+  @impl true
   def handle_batch(users) do
     Process.sleep(@sleep_time)
 
