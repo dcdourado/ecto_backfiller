@@ -80,8 +80,12 @@ defmodule EctoBackfiller.Producer do
 
       Logger.info("Produced #{length(events)} events from: #{last_seeked_val_text}.")
 
-      last_event = Enum.at(events, -1)
-      {:noreply, events, %{state | last_seeked_val: Map.fetch!(last_event, seek_col)}}
+      if length(events) > 0 do
+        last_event = Enum.at(events, -1)
+        {:noreply, events, %{state | last_seeked_val: Map.fetch!(last_event, seek_col)}}
+      else
+        {:noreply, [], state}
+      end
     end
   end
 
