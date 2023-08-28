@@ -61,11 +61,14 @@ defmodule EctoBackfiller.Producer do
         } = state
       )
       when demand > 0 do
-    if (last_seeked_val >= stop_seek_val) do
+    if is_number(last_seeked_val) and is_number(stop_seek_val) and
+         last_seeked_val >= stop_seek_val do
       Logger.warn("Producer has reached the stop seek value: #{stop_seek_val}.")
       {:noreply, [], state}
     else
-      last_seeked_val_text = if last_seeked_val != nil, do: inspect(last_seeked_val), else: "the beginning"
+      last_seeked_val_text =
+        if last_seeked_val != nil, do: inspect(last_seeked_val), else: "the beginning"
+
       Logger.info("Producing #{step} events from: #{last_seeked_val_text}...")
 
       events =
@@ -80,11 +83,12 @@ defmodule EctoBackfiller.Producer do
       last_event = Enum.at(events, -1)
       {:noreply, events, %{state | last_seeked_val: Map.fetch!(last_event, seek_col)}}
     end
-
   end
 
   defp apply_seek(query, _seek_col, nil), do: query
-  defp apply_seek(query, seek_col, last_seeked_val), do: where(query, [a], field(a, ^seek_col) > ^last_seeked_val)
+
+  defp apply_seek(query, seek_col, last_seeked_val),
+    do: where(query, [a], field(a, ^seek_col) > ^last_seeked_val)
 
   @impl true
   def handle_call(:running?, _from, state) do
