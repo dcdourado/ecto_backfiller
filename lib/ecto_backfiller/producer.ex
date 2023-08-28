@@ -1,9 +1,18 @@
 defmodule EctoBackfiller.Producer do
+  @moduledoc """
+  A GenStage producer that produces events from a given query.
+
+  The producer will produce events from the give `query` in batches of
+  `step` size. The events will be ordered by the `seek_col` column. The
+  `last_seeked_val` is the last event `seek_col` value produced and will
+  be used to determine the starting point of the next batch.
+  """
+
   use GenStage
-  import Ecto.Query, only: [limit: 2, offset: 2]
+  import Ecto.Query, only: [limit: 2, order_by: 3, where: 3]
   require Logger
 
-  defstruct [:query, :step, :offset, :stop_offset, :repo, :consumers]
+  defstruct [:query, :step, :seek_col, :last_seeked_val, :stop_seek_val, :repo, :consumers]
 
   def start_link(%__MODULE__{} = config) do
     GenStage.start_link(__MODULE__, %{config | consumers: []})
@@ -42,30 +51,40 @@ defmodule EctoBackfiller.Producer do
   @impl true
   def handle_demand(
         demand,
-        %__MODULE__{query: query, step: step, offset: offset, stop_offset: stop_offset, repo: repo} = state
+        %__MODULE__{
+          query: query,
+          step: step,
+          seek_col: seek_col,
+          last_seeked_val: last_seeked_val,
+          stop_seek_val: stop_seek_val,
+          repo: repo
+        } = state
       )
       when demand > 0 do
-    Logger.info("Producing #{step} events from #{offset} offset...")
-
-    if (is_number(stop_offset) and offset >= stop_offset) do
-      Logger.warning("""
-      Producer stopped because current offset is #{offset} and it reached
-      max offset #{stop_offset}.
-      """)
-
+    if (last_seeked_val >= stop_seek_val) do
+      Logger.warn("Producer has reached the stop seek value: #{stop_seek_val}.")
       {:noreply, [], state}
     else
+      last_seeked_val_text = if last_seeked_val != nil, do: inspect(last_seeked_val), else: "the beginning"
+      Logger.info("Producing #{step} events from: #{last_seeked_val_text}...")
+
       events =
         query
+        |> apply_seek(seek_col, last_seeked_val)
+        |> order_by([_a], {:asc, ^seek_col})
         |> limit(^step)
-        |> offset(^offset)
         |> repo.all(timeout: :infinity)
 
-      Logger.info("Produced #{length(events)} events from #{offset} offset")
+      Logger.info("Produced #{length(events)} events from: #{last_seeked_val_text}.")
 
-      {:noreply, events, %{state | offset: offset + step}}
+      last_event = Enum.at(events, -1)
+      {:noreply, events, %{state | last_seeked_val: Map.fetch!(last_event, seek_col)}}
     end
+
   end
+
+  defp apply_seek(query, _seek_col, nil), do: query
+  defp apply_seek(query, seek_col, last_seeked_val), do: where(query, [a], field(a, ^seek_col) > ^last_seeked_val)
 
   @impl true
   def handle_call(:running?, _from, state) do
