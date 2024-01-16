@@ -21,8 +21,8 @@ defmodule IdentityManager.MixProject do
   defp deps do
     [
       {:ecto_backfiller, path: "../.."},
-      {:ecto, "~> 3.8.4"},
-      {:ecto_sql, "~> 3.8.3"},
+      {:ecto, "~> 3.11.1"},
+      {:ecto_sql, "~> 3.11.1"},
       {:postgrex, ">= 0.0.0"}
     ]
   end

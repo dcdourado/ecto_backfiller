@@ -28,8 +28,8 @@ defmodule EctoBackfiller.MixProject do
   defp deps do
     [
       {:gen_stage, "~> 1.1.2"},
-      {:ecto, "~> 3.8.4"},
-      {:ecto_sql, "~> 3.8.3"},
+      {:ecto, ">= 3.8.4"},
+      {:ecto_sql, ">= 3.8.3"},
       {:postgrex, ">= 0.0.0"},
       {:ex_doc, "~> 0.28.0", only: :dev}
     ]
