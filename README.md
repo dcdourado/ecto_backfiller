@@ -9,7 +9,7 @@ A back-pressured backfill executor for `Ecto` repositories.
 ```elixir
 def deps do
   [
-    {:ecto_backfiller, "~> 0.5.0"}
+    {:ecto_backfiller, "~> 0.5.1"}
   ]
 end
 ```
